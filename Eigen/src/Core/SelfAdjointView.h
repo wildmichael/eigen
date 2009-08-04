@@ -202,22 +202,50 @@ struct ei_triangular_assignment_selector<Derived1, Derived2, SelfAdjoint, Dynami
 
 template<typename Lhs, int LhsMode, typename Rhs>
 struct ei_traits<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true> >
-  : ei_traits<ProductBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true>, Lhs, Rhs> >
+ : ei_traits<Matrix<typename ei_traits<Rhs>::Scalar,Lhs::RowsAtCompileTime,Rhs::ColsAtCompileTime> >
 {};
 
 template<typename Lhs, int LhsMode, typename Rhs>
 struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true>
-  : public ProductBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true>, Lhs, Rhs >
+  : public AnyMatrixBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true> >
 {
-  EIGEN_PRODUCT_PUBLIC_INTERFACE(SelfadjointProductMatrix)
+  typedef typename Lhs::Scalar Scalar;
+
+  typedef typename Lhs::Nested LhsNested;
+  typedef typename ei_cleantype<LhsNested>::type _LhsNested;
+  typedef ei_blas_traits<_LhsNested> LhsBlasTraits;
+  typedef typename LhsBlasTraits::DirectLinearAccessType ActualLhsType;
+  typedef typename ei_cleantype<ActualLhsType>::type _ActualLhsType;
+
+  typedef typename Rhs::Nested RhsNested;
+  typedef typename ei_cleantype<RhsNested>::type _RhsNested;
+  typedef ei_blas_traits<_RhsNested> RhsBlasTraits;
+  typedef typename RhsBlasTraits::DirectLinearAccessType ActualRhsType;
+  typedef typename ei_cleantype<ActualRhsType>::type _ActualRhsType;
 
   enum {
     LhsUpLo = LhsMode&(UpperTriangularBit|LowerTriangularBit)
   };
 
-  SelfadjointProductMatrix(const Lhs& lhs, const Rhs& rhs) : Base(lhs,rhs) {}
+  SelfadjointProductMatrix(const Lhs& lhs, const Rhs& rhs)
+    : m_lhs(lhs), m_rhs(rhs)
+  {}
 
-  template<typename Dest> void addTo(Dest& dst, Scalar alpha) const
+  inline int rows() const { return m_lhs.rows(); }
+  inline int cols() const { return m_rhs.cols(); }
+
+  template<typename Dest> inline void addToDense(Dest& dst) const
+  { evalTo(dst,1); }
+  template<typename Dest> inline void subToDense(Dest& dst) const
+  { evalTo(dst,-1); }
+
+  template<typename Dest> void evalToDense(Dest& dst) const
+  {
+    dst.setZero();
+    evalTo(dst,1);
+  }
+
+  template<typename Dest> void evalTo(Dest& dst, Scalar alpha) const
   {
     ei_assert(dst.rows()==m_lhs.rows() && dst.cols()==m_rhs.cols());
 
@@ -237,6 +265,9 @@ struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true>
         actualAlpha                                     // scale factor
       );
   }
+
+  const LhsNested m_lhs;
+  const RhsNested m_rhs;
 };
 
 /***************************************************************************
@@ -245,16 +276,33 @@ struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,0,true>
 
 template<typename Lhs, int LhsMode, typename Rhs, int RhsMode>
 struct ei_traits<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false> >
-  : ei_traits<ProductBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false>, Lhs, Rhs> >
+ : ei_traits<Matrix<typename ei_traits<Rhs>::Scalar,Lhs::RowsAtCompileTime,Rhs::ColsAtCompileTime> >
 {};
 
 template<typename Lhs, int LhsMode, typename Rhs, int RhsMode>
 struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false>
-  : public ProductBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false>, Lhs, Rhs >
+  : public AnyMatrixBase<SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false> >
 {
-  EIGEN_PRODUCT_PUBLIC_INTERFACE(SelfadjointProductMatrix)
+  SelfadjointProductMatrix(const Lhs& lhs, const Rhs& rhs)
+    : m_lhs(lhs), m_rhs(rhs)
+  {}
 
-  SelfadjointProductMatrix(const Lhs& lhs, const Rhs& rhs) : Base(lhs,rhs) {}
+  inline int rows() const { return m_lhs.rows(); }
+  inline int cols() const { return m_rhs.cols(); }
+
+  typedef typename Lhs::Scalar Scalar;
+
+  typedef typename Lhs::Nested LhsNested;
+  typedef typename ei_cleantype<LhsNested>::type _LhsNested;
+  typedef ei_blas_traits<_LhsNested> LhsBlasTraits;
+  typedef typename LhsBlasTraits::DirectLinearAccessType ActualLhsType;
+  typedef typename ei_cleantype<ActualLhsType>::type _ActualLhsType;
+
+  typedef typename Rhs::Nested RhsNested;
+  typedef typename ei_cleantype<RhsNested>::type _RhsNested;
+  typedef ei_blas_traits<_RhsNested> RhsBlasTraits;
+  typedef typename RhsBlasTraits::DirectLinearAccessType ActualRhsType;
+  typedef typename ei_cleantype<ActualRhsType>::type _ActualRhsType;
 
   enum {
     LhsUpLo = LhsMode&(UpperTriangularBit|LowerTriangularBit),
@@ -263,10 +311,21 @@ struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false>
     RhsIsSelfAdjoint = (RhsMode&SelfAdjointBit)==SelfAdjointBit
   };
 
-  template<typename Dest> void addTo(Dest& dst, Scalar alpha) const
+  template<typename Dest> inline void addToDense(Dest& dst) const
+  { evalTo(dst,1); }
+  template<typename Dest> inline void subToDense(Dest& dst) const
+  { evalTo(dst,-1); }
+
+  template<typename Dest> void evalToDense(Dest& dst) const
+  {
+    dst.setZero();
+    evalTo(dst,1);
+  }
+
+  template<typename Dest> void evalTo(Dest& dst, Scalar alpha) const
   {
     ei_assert(dst.rows()==m_lhs.rows() && dst.cols()==m_rhs.cols());
-
+    
     const ActualLhsType lhs = LhsBlasTraits::extract(m_lhs);
     const ActualRhsType rhs = RhsBlasTraits::extract(m_rhs);
 
@@ -289,6 +348,9 @@ struct SelfadjointProductMatrix<Lhs,LhsMode,false,Rhs,RhsMode,false>
         actualAlpha                       // alpha
       );
   }
+
+  const LhsNested m_lhs;
+  const RhsNested m_rhs;
 };
 
 /***************************************************************************
