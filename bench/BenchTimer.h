@@ -26,14 +26,8 @@
 #ifndef EIGEN_BENCH_TIMER_H
 #define EIGEN_BENCH_TIMER_H
 
-#ifndef WIN32
 #include <sys/time.h>
 #include <unistd.h>
-#else
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 #include <cstdlib>
 #include <numeric>
 
@@ -46,15 +40,7 @@ class BenchTimer
 {
 public:
 
-  BenchTimer() 
-  { 
-#ifdef WIN32
-    LARGE_INTEGER freq;
-    QueryPerformanceFrequency(&freq);
-    m_frequency = (double)freq.QuadPart;
-#endif
-    reset(); 
-  }
+  BenchTimer() { reset(); }
 
   ~BenchTimer() {}
 
@@ -65,35 +51,23 @@ public:
     m_best = std::min(m_best, getTime() - m_start);
   }
 
-  /** Return the best elapsed time in seconds.
+  /** Return the best elapsed time.
     */
   inline double value(void)
   {
-    return m_best;
+      return m_best;
   }
 
-#ifdef WIN32
-  inline double getTime(void)
-#else
   static inline double getTime(void)
-#endif
   {
-#ifdef WIN32
-    LARGE_INTEGER query_ticks;
-    QueryPerformanceCounter(&query_ticks);
-    return query_ticks.QuadPart/m_frequency;
-#else
       struct timeval tv;
       struct timezone tz;
       gettimeofday(&tv, &tz);
       return (double)tv.tv_sec + 1.e-6 * (double)tv.tv_usec;
-#endif
   }
 
 protected:
-#ifdef WIN32
-  double m_frequency;
-#endif
+
   double m_best, m_start;
 
 };
